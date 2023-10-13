@@ -17,6 +17,12 @@ CONNECT_BY_SET = SERVER_FACTORY.CreateHttp(LEVELID)
 #代码版本号（自行修改）
 CODE_VERSION = "v231014.1"
 
+#云配置数据（通过开发者后台云配置读取，这里仅能修改提示）
+MAP_NAME = "未获取到地图名"  #地图名
+MAP_NOTICE = "未获取到公告"  #公告
+MAP_URGENT_SWITCH = False  #紧急公告开关
+MAP_URGENT_NOTICE = "如果你看到这个一直在弹出来，请关闭房间保存地图重新启动"  #紧急公告
+
 #默认游戏规则
 DEFAULT_GAME_RULE ={
 'option_info': {
@@ -41,8 +47,16 @@ DEFAULT_GAME_RULE ={
     }
 }
 
-#云数据KEY配置
-CLOUD_KEY_SHOP_GOODS = "ShopGoods",
+#云数据KEY配置（不可修改）
+CLOUD_KEY_OP_CONFIG = "op_CONFIG",
+CLOUD_KEY_ORDERS = "orders"
+
+#云数据KEY配置（可修改）
+CLOUD_KEY_SHOP_GOODS = "shopGoods",
+CLOUD_KEY_SPAN_GOODS = "spanItems"
+
+
+
 
 #DEBUG
 DEBUG = True
