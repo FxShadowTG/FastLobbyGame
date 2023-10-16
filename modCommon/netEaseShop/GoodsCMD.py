@@ -1,4 +1,4 @@
-from FastLobbyGameMod.Config import SERVER_FACTORY   #此处需要自行修改Mod的名字
+from FastLobbyGameMod.modCommon.Config import SERVER_FACTORY   #此处需要自行修改Mod的名字
 import logging
 from math import floor
 #实现指令模块

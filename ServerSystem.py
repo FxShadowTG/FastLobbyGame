@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import server.extraServerApi as serverApi
-import Config
-from modCommon.shop.GoodsCMD import GoodsCMDClass
+import modCommon.Config as Config
+from modCommon.netEaseShop.GoodsCMD import GoodsCMDClass
 import logging
 import time
 from math import floor
@@ -17,23 +17,7 @@ CONNECT_BY_SET = Config.CONNECT_BY_SET
 CREATE_GAME_BY_LEVELID = Config.CREATE_GAME_BY_LEVELID
 GOODS_CMD = GoodsCMDClass()   #发货指令
 
-mapName = Config.MAP_NAME  #地图名
-mapNotice = Config.MAP_NOTICE  #公告
-mapUrgentSwitch = Config.MAP_URGENT_SWITCH  #紧急公告开关
-mapUrgentNotice = Config.MAP_URGENT_NOTICE  #紧急公告
-
 eventList = []  #监听中的事件
-wholeExtraDataDict = {} #实体信息
-playerList = [] #玩家列表
-whiteList = []  #管理员列表
-uidDict = {}    #玩家的UID
-playerGoodsDict = {}    #玩家拥有的商品（商品 = 实现指令）
-playerSpanItemsDict = {}    #玩家拥有的跨房物品
-
-cdDict = {} #冷却变量表（每秒-1）
-
-if DEBUG:
-    whiteList.append("1292492939") #添加你的测试启动器开发者账号的UID
 
 #一个装饰器，使某个服务端类的函数变成回调函数。
 #funcOrStr：既可以是函数，也可以是事件名称。
@@ -53,6 +37,7 @@ class ServerSystem(serverApi.GetServerSystemCls()):
         logging.info( "code version: " + CODE_VERSION)  
         for EN, ESN, eventName, callback in eventList:
             self.ListenForEvent(EN, ESN, eventName, self, callback)
+        self.InitData()
         self.InitWorld()
         self.InitOptions()
         
@@ -75,7 +60,21 @@ class ServerSystem(serverApi.GetServerSystemCls()):
         self.BroadcastToAllClient('ServerEvent', {'funcName': funcName, 'funcArgs': funcArgs})
 
 #------------------------------------------初始化和管理------------------------------------------#
-    
+    #初始化服务端变量和数据
+    def InitData(self):
+        self.playerList = [] #玩家列表
+        self.uidDict = {}    #玩家的UID
+        self.playerGoodsDict = {}    #玩家拥有的商品（商品 = 实现指令）
+        self.playerSpanItemsDict = {}    #玩家拥有的跨房物品
+        self.cdDict = {} #冷却变量表（每秒-1）
+
+        self.whiteList = Config.ADMIN_LIST  #管理员列表
+
+        self.mapName = Config.MAP_NAME  #地图名
+        self.mapNotice = Config.MAP_NOTICE  #公告
+        self.mapUrgentSwitch = Config.MAP_URGENT_SWITCH  #紧急公告开关
+        self.mapUrgentNotice = Config.MAP_URGENT_NOTICE  #紧急公告
+
     #初始化世界
     def InitWorld(self):
         #设置实体上限
@@ -110,39 +109,39 @@ class ServerSystem(serverApi.GetServerSystemCls()):
 
     #初始化个人数据
     def _loadPlayerData(self,playerId):
-        if playerId not in playerList:
-            playerList.append(playerId)
+        if playerId not in self.playerList:
+            self.playerList.append(playerId)
 
-        if playerId not in uidDict:
+        if playerId not in self.uidDict:
             if DEBUG:
-                uidDict[playerId] = "1292492939"
+                self.uidDict[playerId] = "1292492939"
             else:
-                uidDict[playerId] = self.GetUid(playerId)
+                self.uidDict[playerId] = self.GetUid(playerId)
         
         #获取玩家的商品到玩家商品表并发货
-        self.GetDataFromCloudAndAction(playerId,uidDict[playerId],Config.CLOUD_KEY_SHOP_GOODS,0)
+        self.GetDataFromCloudAndAction(playerId,self.uidDict[playerId],Config.CLOUD_KEY_SHOP_GOODS,0)
 
     #移除个人数据
     def RemovePlayerData(self,playerId):
-        if playerId in playerList:
-            playerList.remove(playerId)
+        if playerId in self.playerList:
+            self.playerList.remove(playerId)
 
         if not DEBUG:
-            if playerId in uidDict:
-                del uidDict[playerId]
+            if playerId in self.uidDict:
+                del self.uidDict[playerId]
 
 #------------------------------------------计时相关操作------------------------------------------#
 
     #轮询查询并发货
     def DeliverGoodsCycle(self):
-        for playerId in playerList:
+        for playerId in self.playerList:
             self.DeliverGoods(playerId)
 
     #轮询减少所有cd
     def ReduceCDCycle(self):
-        for k,v in cdDict.items():
+        for k,v in self.cdDict.items():
             if v > 0:
-                cdDict[k] -= 1
+                self.cdDict[k] -= 1
 
     #启动所有计时器
     def ActionTimer(self):
@@ -162,12 +161,12 @@ class ServerSystem(serverApi.GetServerSystemCls()):
     
     #获取紧急公告（只有执行过GetOperateInfoFromCloud时，该函数才有效）
     def GetUrgentNotice(self):
-        if mapUrgentSwitch == True:
-            CREATE_GAME_BY_LEVELID.SetNotifyMsg(mapUrgentNotice,serverApi.GenerateColor('RED'))
+        if self.mapUrgentSwitch == True:
+            CREATE_GAME_BY_LEVELID.SetNotifyMsg(self.mapUrgentNotice,serverApi.GenerateColor('RED'))
 
     #获取全部云配置数据信息（只有执行过GetOperateInfoFromCloud时，该函数才有效）
     def GetOperateInfoFromFile(self):
-        return {"name": mapName,"notice": mapNotice,"urgentSwitch": mapUrgentSwitch,"urgentNotice": mapUrgentNotice}
+        return {"name": self.mapName,"notice": self.mapNotice,"urgentSwitch": self.mapUrgentSwitch,"urgentNotice": self.mapUrgentNotice}
 
     #自定义回调调试信息
     def GetDebugCallback(self,message,code,key,value):
@@ -198,10 +197,10 @@ class ServerSystem(serverApi.GetServerSystemCls()):
                 if actionType == 0:
                     newData = data["entity"]["data"][0]['value']
                     if newData != [] and type(newData) == list:
-                        playerGoodsDict[playerId] = newData
+                        self.playerGoodsDict[playerId] = newData
                         entitycomp = FACTORY.CreateExtraData(playerId)
                         #查询玩家这个实现指令是否已经在本存档发过货
-                        for cmd in playerGoodsDict[playerId]:
+                        for cmd in self.playerGoodsDict[playerId]:
                             existItems = entitycomp.GetExtraData(cmd)
                             if not existItems:
                                 logging.info(cmd + "玩家未在本存档有过该数据，准备给玩家发货：")
@@ -214,16 +213,16 @@ class ServerSystem(serverApi.GetServerSystemCls()):
                                 entitycomp.SetExtraData(cmd, playerId)
                                 entitycomp.SaveExtraData()
                 else:
-                    playerGoodsDict[playerId] = []
+                    self.playerGoodsDict[playerId] = []
 
                 # 获取玩家的跨房物品
                 if actionType == 1:
                     newData = data["entity"]["data"][0]['value']
                     if newData != [] and type(newData) == list:
-                        playerSpanItemsDict[playerId] = newData
+                        self.playerSpanItemsDict[playerId] = newData
                         entitycomp = FACTORY.CreateExtraData(playerId)
                         #查询玩家这个实现指令是否已经在本存档发过货
-                        for item in playerSpanItemsDict[playerId]:
+                        for item in self.playerSpanItemsDict[playerId]:
                             existItems = entitycomp.GetExtraData(item["extraId"])
                         if not existItems:
                             existItems = {}
@@ -248,7 +247,7 @@ class ServerSystem(serverApi.GetServerSystemCls()):
                             entitycomp.SetExtraData(extraId, playerId)
                             entitycomp.SaveExtraData()
                 else:
-                    playerSpanItemsDict[playerId] = []
+                    self.playerSpanItemsDict[playerId] = []
             logging.info("GetDataFromCloudAndAction succeeded")
         if not DEBUG:
             CONNECT_BY_GET.LobbyGetStorage(cb, uid, key)
@@ -266,10 +265,10 @@ class ServerSystem(serverApi.GetServerSystemCls()):
         def cb(data):
             if data:
                 dataDict = data["entity"]["data"][0]["value"]
-                mapName = dataDict["name"]
-                mapNotice = dataDict["notice"]
-                mapUrgentSwitch = dataDict["urgentSwitch"]
-                mapUrgentNotice = dataDict["urgentNotice"]
+                self.mapName = dataDict["name"]
+                self.mapNotice = dataDict["notice"]
+                self.mapUrgentSwitch = dataDict["urgentSwitch"]
+                self.mapUrgentNotice = dataDict["urgentNotice"]
                 logging.info("GetOprInfo succeeded")
             else:
                 logging.info("GetOprInfo failed")
@@ -293,18 +292,18 @@ class ServerSystem(serverApi.GetServerSystemCls()):
                         compCreateMsg.NotifyOneMessage(playerId, "物品发货失败，请联系管理员！ ", "§c")
                         return
                     #存储用户的实现指令并上传云端
-                    if playerId not in playerGoodsDict:
-                        playerGoodsDict[playerId] = [order["cmd"]]
+                    if playerId not in self.playerGoodsDict:
+                        self.playerGoodsDict[playerId] = [order["cmd"]]
                     else:
-                        playerGoodsDict[playerId].append(order["cmd"])
-                    self.SetData(uidDict[playerId],Config.CLOUD_KEY_SHOP_GOODS,playerGoodsDict[playerId])
+                        self.playerGoodsDict[playerId].append(order["cmd"])
+                    self.SetData(self.uidDict[playerId],Config.CLOUD_KEY_SHOP_GOODS,self.playerGoodsDict[playerId])
                     #标记发货
-                    self.TagOrder(uidDict[playerId],order["order_id"])
+                    self.TagOrder(self.uidDict[playerId],order["order_id"])
                     compCreateMsg.NotifyOneMessage(playerId, "感谢你购买本商品，如有任何疑惑请在评论区反馈! ", "§e")
                     logging.info("DeliverGoods succeeded")
             else:
                 logging.info("DeliverGoods failed")
-        CONNECT_BY_GET.QueryLobbyUserItem(cb, uidDict[playerId])
+        CONNECT_BY_GET.QueryLobbyUserItem(cb, self.uidDict[playerId])
 
     #标记订单
     def TagOrder(self,uid,orderId):
@@ -356,7 +355,7 @@ class ServerSystem(serverApi.GetServerSystemCls()):
         compCreateName = FACTORY.CreateName(args["playerId"])
         name = compCreateName.GetName()
         #如果为创造则改模式并踢掉
-        if args["newGameType"] == 1 and uidDict[args["playerId"]] not in whiteList:
+        if args["newGameType"] == 1 and self.uidDict[args["playerId"]] not in self.whiteList:
             CMD("/gamemode 0 " + name)
             CMD("/kick " + name)
 
@@ -365,7 +364,7 @@ class ServerSystem(serverApi.GetServerSystemCls()):
     def OnCommandEvent(self,args):
         compCreateName = FACTORY.CreateName(args["playerId"])
         name = compCreateName.GetName()
-        if uidDict[args["entityId"]] not in whiteList:
+        if self.uidDict[args["entityId"]] not in self.whiteList:
             args["cancel"] = True
             CMD("/kick " + name)
             return
@@ -374,8 +373,8 @@ class ServerSystem(serverApi.GetServerSystemCls()):
     def SafetyCycle(self):
         if not DEBUG:
             CMD("/gamerule commandblocksenabled true")
-            for playerId in playerList:
-                if uidDict[playerId] in whiteList:
+            for playerId in self.playerList:
+                if self.uidDict[playerId] in self.whiteList:
                     continue
                 CMD("/deop @s",playerId)
 

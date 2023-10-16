@@ -2,7 +2,10 @@
 import server.extraServerApi as serverApi
 import client.extraClientApi as clientApi
 
-MOD_NAME = __file__.rsplit('/'if'/'in __file__ else'.', 2)[-2]
+#DEBUG
+DEBUG = True
+
+MOD_NAME = "FastLobbyGameMod"   #此处修改为你的组件名字
 SERVER_FACTORY = serverApi.GetEngineCompFactory()
 CLIENT_FACTORY = clientApi.GetEngineCompFactory()
 
@@ -14,8 +17,11 @@ CREATE_GAME_BY_LEVELID = SERVER_FACTORY.CreateGame(LEVELID)
 CONNECT_BY_GET = SERVER_FACTORY.CreateHttp(LEVELID)
 CONNECT_BY_SET = SERVER_FACTORY.CreateHttp(LEVELID)
 
+#管理员UID
+ADMIN_LIST = ["1292492939","12345678910"]
+
 #代码版本号（自行修改）
-CODE_VERSION = "v231014.1"
+CODE_VERSION = MOD_NAME + "v231016.1"
 
 #云配置数据（通过开发者后台云配置读取，这里仅能修改提示）
 MAP_NAME = "未获取到地图名"  #地图名
@@ -55,8 +61,8 @@ CLOUD_KEY_ORDERS = "orders"
 CLOUD_KEY_SHOP_GOODS = "shopGoods",
 CLOUD_KEY_SPAN_GOODS = "spanItems"
 
-
-
-
-#DEBUG
-DEBUG = True
+#商店插件 开启状态
+PLUGIN_STORE_MOD_STATUS = True
+PLUGIN_STORE_MOD_NAME = "StoreMod"
+PLUGIN_STORE_MOD_PATH = MOD_NAME + ".plugin.StoreMod"
+PLUGIN_STORE_MOD_UI_PATH = MOD_NAME + ".plugin.StoreMod.uiScript"
