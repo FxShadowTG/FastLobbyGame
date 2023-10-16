@@ -18,7 +18,7 @@ class ClientSystem(clientApi.GetClientSystemCls()):
         for EN, ESN, eventName, callback in eventList:
             self.ListenForEvent(EN, ESN, eventName, self, callback)
 
-    @Listen('ServerEvent', Config.MOD_NAME, 'ServerSystem')
+    @Listen('ServerEvent', Config.PLUGIN_STORE_MOD_PATH, 'ServerSystem')
     def OnGetServerEvent(self, args):
         getattr(self, args['funcName'])(args['funcArgs'])
 
@@ -36,13 +36,19 @@ class ClientSystem(clientApi.GetClientSystemCls()):
 
     @Listen
     def UiInitFinished(self, args):
-        print("启用ui完成中")
-        print(Config.PLUGIN_STORE_MOD_NAME)
-        self.Tellraw(Config.PLUGIN_STORE_MOD_NAME + '客户端： ' + 'UiInitFinished')
         uiName = 'flg_plugin_store_ui0'
         clientApi.RegisterUI(Config.PLUGIN_STORE_MOD_NAME, uiName, Config.PLUGIN_STORE_MOD_UI_PATH+'.'+uiName+'.'+uiName, uiName+'.main')
         self.uiNode = clientApi.CreateUI(Config.PLUGIN_STORE_MOD_NAME, uiName, {'isHud': 1})
-        print("启用ui成功")
+
+    #渲染商店的玩家背包
+    @Listen
+    def RenderPlayerBagOnStore(self,args):
+        self.uiNode.RenderStorePlayerBag(args["itemsList"])
+
+    #刷新上架页面全部数据
+    def RefreshUploadDatum(self,args):
+        self.uiNode.RefreshUploadDatum()
+
 
     def OnRepeat(self, args):
         self.Tellraw(Config.PLUGIN_STORE_MOD_NAME + '客户端收到： ' + args['message'])

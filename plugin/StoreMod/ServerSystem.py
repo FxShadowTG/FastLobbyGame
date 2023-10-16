@@ -71,12 +71,34 @@ class ServerSystem(serverApi.GetServerSystemCls()):
     def OnSetCommand(self, args):
         CMD(args['command'], args['__id__'])
 
+    #callback - 上传物品到商品架
+    @Listen
+    def UploadItemToStore(self, args):
+        #校验玩家是否有该物品
+        print(args)
+        compCreateItem = FACTORY.CreateItem(args["__id__"])
+        itemDict = args["itemDict"]
+        itemsList = compCreateItem.GetPlayerAllItems(serverApi.GetMinecraftEnum().ItemPosType.INVENTORY)
+        for index, i in enumerate(itemsList):
+            #如果匹配成功
+            if i == itemDict and itemDict["count"] - args["count"] >= 0:
+                print("match")
+                #减少对应的物品
+                itemDict["count"] -= args["count"]
+                compCreateItem.SpawnItemToPlayerInv(itemDict, args["__id__"], index)
+                #上架道具
+                #请求客户端刷新上架页面数据
+                self.CallClient(args["__id__"],"RefreshUploadDatum",None)
+        
     #callBack - 获取背包所有物品
     @Listen
     def GetPlayerBag(self, args):
-        print("这里是store的GetPlayerBag server")
-        CMD("/give @s glass",args["playerId"])
-        return
+        compCreateItem = FACTORY.CreateItem(args["playerId"])
+        itemsList = compCreateItem.GetPlayerAllItems(serverApi.GetMinecraftEnum().ItemPosType.INVENTORY)
+        playerBagData = self.CreateEventData()
+        playerBagData["playerId"] = args["playerId"]
+        playerBagData["itemsList"] = itemsList
+        self.CallClient(args["playerId"],"RenderPlayerBagOnStore",playerBagData)
         
     #玩家聊天时
     @Listen('ServerChatEvent')
